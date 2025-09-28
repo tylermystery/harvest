@@ -27,41 +27,28 @@ exports.handler = async function(event, context) {
         }
 
         const { userId } = decodeToken(token);
-        console.log(`[DEBUG] Starting process for User ID: ${userId}`);
-
         const userRecord = await base('Users').find(userId);
         const userData = userRecord.fields;
-        console.log("[DEBUG] Found user data:", userData);
+        console.log("[DEBUG] Found user data. Role:", userData.Role);
 
         let rentData = null;
-        console.log(`[DEBUG] Checking user role. Is Role === 'Tenant'? ${userData.Role === 'Tenant'}`);
         
-        if (userData.Role === 'Tenant') {
-            console.log("[DEBUG] User is a Tenant. Preparing to search for rent records.");
-            const filterFormula = `RECORD_ID({Tenant}) = '${userId}'`;
-            console.log("[DEBUG] Using filter formula:", filterFormula);
-
-            const rentRecords = await base('RentLedger').select({
-                filterByFormula: filterFormula,
-                maxRecords: 1,
-                sort: [{field: "Month", direction: "desc"}]
-            }).firstPage();
+        // --- NEW, SIMPLIFIED LOGIC ---
+        // If the user is a Tenant and has a linked RentLedger record...
+        if (userData.Role === 'Tenant' && userData.RentLedger && userData.RentLedger.length > 0) {
+            const rentLedgerId = userData.RentLedger[0];
+            console.log(`[DEBUG] User is a Tenant. Fetching linked RentLedger record: ${rentLedgerId}`);
             
-            console.log(`[DEBUG] Found ${rentRecords.length} rent record(s).`);
+            // Directly find the specific rent record using its ID
+            const rentRecord = await base('RentLedger').find(rentLedgerId);
+            const currentRentFields = rentRecord.fields;
+            console.log("[DEBUG] Found rent record fields:", currentRentFields);
 
-            if (rentRecords.length > 0) {
-                const currentRentFields = rentRecords[0].fields;
-                console.log("[DEBUG] Full rent record object received from Airtable:", currentRentFields);
-
-                rentData = {
-                    status: currentRentFields.Status, 
-                    amount: currentRentFields['Amount Due'],
-                    month: currentRentFields.Month
-                };
-                console.log("[DEBUG] Assembled rentData object:", rentData);
-            } else {
-                console.log("[DEBUG] No rent records found for this user, rentData will be null.");
-            }
+            rentData = {
+                status: currentRentFields.Status, 
+                amount: currentRentFields['Amount Due'],
+                month: currentRentFields.Month
+            };
         }
         
         const response = {
@@ -71,7 +58,7 @@ exports.handler = async function(event, context) {
             netContributionScore: 0, 
             rent: rentData,
         };
-        console.log("[DEBUG] Final response object being sent to frontend:", response);
+        console.log("[DEBUG] Final response:", response);
 
         return {
             statusCode: 200,
