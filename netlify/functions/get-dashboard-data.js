@@ -36,7 +36,7 @@ exports.handler = async function(event, context) {
         let rentData = null;
         if (userData.Role === 'Tenant') {
             const rentRecords = await base('RentLedger').select({
-                filterByFormula: `{Tenant} = '${userData.Name}'`, // Assuming tenant name is unique for formula
+                filterByFormula: `RECORD_ID({Tenant}) = '${userId}'`,
                 maxRecords: 1,
                 sort: [{field: "Month", direction: "desc"}]
             }).firstPage();
