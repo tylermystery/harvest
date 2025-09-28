@@ -1,9 +1,11 @@
 // netlify/functions/get-dashboard-data.js
 
 const Airtable = require('airtable');
-
-// IMPORTANT: Use environment variables in Netlify for these!
-const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID);
+Airtable.configure({
+    endpointUrl: 'https://api.airtable.com',
+    apiKey: process.env.AIRTABLE_PAT // We will use this new variable name
+});
+const base = Airtable.base(process.env.AIRTABLE_BASE_ID);
 
 // This is a placeholder for your JWT decoding logic.
 // In a real app, you'd use a library like 'jsonwebtoken' to verify and decode.
