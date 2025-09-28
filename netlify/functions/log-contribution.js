@@ -40,7 +40,8 @@ exports.handler = async function(event, context) {
         await base('Contributions').create([
             {
                 "fields": {
-                    "Contributor": [userId], // Link to the user record
+                    // --- FIX: Send a single string instead of an array ---
+                    "Contributor": userId, // Link to the user record
                     "Date": new Date().toISOString().slice(0, 10),
                     "Hours Logged": parseFloat(data.hours),
                     "Description": data.description,
@@ -62,3 +63,4 @@ exports.handler = async function(event, context) {
         };
     }
 };
+
