@@ -17,9 +17,16 @@ exports.handler = async function(event, context) {
     }
 
     try {
+        // --- NEW SAFEGUARD ---
+        // Check if the authorization header exists before trying to use it.
+        if (!event.headers.authorization) {
+            return { statusCode: 401, body: 'Unauthorized: Missing authorization header.' };
+        }
+        // ---------------------
+
         const token = event.headers.authorization.split(' ')[1];
         if (!token) {
-            return { statusCode: 401, body: 'Unauthorized' };
+            return { statusCode: 401, body: 'Unauthorized: Missing token.' };
         }
 
         const { userId } = decodeToken(token);
@@ -35,7 +42,6 @@ exports.handler = async function(event, context) {
             }).firstPage();
             
             if (rentRecords.length > 0) {
-                // --- FINAL DEBUG LOG ---
                 // This will show us all available fields for the rent record.
                 console.log("[DEBUG] Full rent record fields found:", rentRecords[0].fields);
 
