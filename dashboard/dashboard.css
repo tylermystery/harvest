@@ -1,0 +1,26 @@
+/* Basic styles */
+body { font-family: sans-serif; background-color: #f4f7f6; margin: 0; }
+header { background-color: #fff; padding: 20px; text-align: center; border-bottom: 1px solid #ddd; }
+main { padding: 20px; }
+
+/* Dashboard layout */
+#dashboard-container { display: grid; grid-template-columns: 1fr; gap: 20px; max-width: 800px; margin: auto; }
+
+/* Generic card style */
+.dashboard-card { background-color: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+.dashboard-card h2 { margin-top: 0; }
+
+/* Rent card specifics */
+.rent-card { border-left: 5px solid #ccc; }
+.rent-card[data-status="Paid"] { border-left-color: #4CAF50; }
+.rent-card[data-status="Due"] { border-left-color: #2196F3; }
+.rent-card[data-status="Overdue"] { border-left-color: #F44336; }
+.rent-status { font-size: 1.2em; font-weight: bold; padding: 10px; border-radius: 5px; text-align: center; }
+.rent-status.paid { background-color: #e8f5e9; color: #2e7d32; }
+.rent-status.due { background-color: #e3f2fd; color: #1565c0; }
+.rent-status.overdue { background-color: #ffebee; color: #c62828; }
+.rent-details { margin-top: 15px; font-size: 1.5em; text-align: center; }
+
+/* Loading Spinner */
+.loading { text-align: center; padding: 50px; }
+.spinner { /* Add your preferred spinner CSS here */ }
