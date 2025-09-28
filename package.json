@@ -1,0 +1,15 @@
+{
+  "name": "harvest",
+  "version": "1.0.0",
+  "description": "1. Spec Sheet (Product Specification Document) 1.1. Vision & Goal To create a centralized, intuitive dashboard that transparently reflects an individual's contributions to the community. This platform will foster engagement, clarify responsibilities, and visually represent the collective health and vibrancy of our ecosystem through the \"Harvest\" metaphor.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "airtable": "^0.12.2"
+  }
+}
