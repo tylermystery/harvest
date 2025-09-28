@@ -17,12 +17,9 @@ exports.handler = async function(event, context) {
     }
 
     try {
-        // --- NEW SAFEGUARD ---
-        // Check if the authorization header exists before trying to use it.
         if (!event.headers.authorization) {
             return { statusCode: 401, body: 'Unauthorized: Missing authorization header.' };
         }
-        // ---------------------
 
         const token = event.headers.authorization.split(' ')[1];
         if (!token) {
@@ -30,28 +27,40 @@ exports.handler = async function(event, context) {
         }
 
         const { userId } = decodeToken(token);
+        console.log(`[DEBUG] Starting process for User ID: ${userId}`);
+
         const userRecord = await base('Users').find(userId);
         const userData = userRecord.fields;
+        console.log("[DEBUG] Found user data:", userData);
 
         let rentData = null;
+        console.log(`[DEBUG] Checking user role. Is Role === 'Tenant'? ${userData.Role === 'Tenant'}`);
+        
         if (userData.Role === 'Tenant') {
+            console.log("[DEBUG] User is a Tenant. Preparing to search for rent records.");
+            const filterFormula = `RECORD_ID({Tenant}) = '${userId}'`;
+            console.log("[DEBUG] Using filter formula:", filterFormula);
+
             const rentRecords = await base('RentLedger').select({
-                filterByFormula: `RECORD_ID({Tenant}) = '${userId}'`,
+                filterByFormula: filterFormula,
                 maxRecords: 1,
                 sort: [{field: "Month", direction: "desc"}]
             }).firstPage();
             
-            if (rentRecords.length > 0) {
-                // This will show us all available fields for the rent record.
-                console.log("[DEBUG] Full rent record fields found:", rentRecords[0].fields);
+            console.log(`[DEBUG] Found ${rentRecords.length} rent record(s).`);
 
-                const currentRent = rentRecords[0].fields;
+            if (rentRecords.length > 0) {
+                const currentRentFields = rentRecords[0].fields;
+                console.log("[DEBUG] Full rent record object received from Airtable:", currentRentFields);
+
                 rentData = {
-                    // Make sure these field names exactly match what the log shows
-                    status: currentRent.Status, 
-                    amount: currentRent['Amount Due'],
-                    month: currentRent.Month
+                    status: currentRentFields.Status, 
+                    amount: currentRentFields['Amount Due'],
+                    month: currentRentFields.Month
                 };
+                console.log("[DEBUG] Assembled rentData object:", rentData);
+            } else {
+                console.log("[DEBUG] No rent records found for this user, rentData will be null.");
             }
         }
         
@@ -62,6 +71,7 @@ exports.handler = async function(event, context) {
             netContributionScore: 0, 
             rent: rentData,
         };
+        console.log("[DEBUG] Final response object being sent to frontend:", response);
 
         return {
             statusCode: 200,
