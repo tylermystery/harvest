@@ -1,13 +1,13 @@
 // dashboard-v2.js
+import { renderHarvestCard } from './ui/harvest.js';
+import { renderContributionsCard } from './ui/contributions.js';
 
-// This UI component function can be in its own file, but for simplicity,
-// we'll keep it here for the final check.
+// --- Helper Function ---
 function renderRentCard(rentData) {
     const card = document.createElement('div');
     card.className = 'dashboard-card rent-card';
     card.dataset.status = rentData.status;
 
-    // Use a nullish coalescing operator for safety
     const statusClass = (rentData.status || 'unknown').toLowerCase();
     const statusText = rentData.status || 'Unknown';
 
@@ -22,12 +22,10 @@ function renderRentCard(rentData) {
     return card;
 }
 
-
-// --- UPDATED AND ROBUST API FUNCTION ---
+// --- API Function with Cache Busting ---
 async function fetchApi(endpoint, options = {}) {
     const token = localStorage.getItem('authToken');
     if (!token) {
-        // Instead of an alert and a silent return, we throw a clear error.
         throw new Error('Authentication token not found.');
     }
 
@@ -35,9 +33,7 @@ async function fetchApi(endpoint, options = {}) {
         headers: { 'Authorization': `Bearer ${token}` }
     };
     
-    // --- FIX: Add a cache-busting timestamp ---
     const url = `/.netlify/functions/${endpoint}?t=${new Date().getTime()}`;
-
     const response = await fetch(url, { ...defaultOptions, ...options });
 
     if (!response.ok) {
@@ -46,8 +42,7 @@ async function fetchApi(endpoint, options = {}) {
     return response.json();
 }
 
-
-// --- UPDATED AND ROBUST INITIALIZATION FUNCTION ---
+// --- Main Application Initialization ---
 async function initDashboard() {
     const container = document.getElementById('dashboard-container');
     try {
@@ -58,24 +53,25 @@ async function initDashboard() {
         container.innerHTML = ''; // Clear the spinner
         container.classList.remove('loading');
 
-        // Render the Rent Card if the user is a tenant and has rent data
+        // --- Render All Cards ---
+        const harvestCard = renderHarvestCard(data);
+        container.appendChild(harvestCard);
+
         if (data && data.role === 'Tenant' && data.rent) {
             const rentCard = renderRentCard(data.rent);
             container.appendChild(rentCard);
-        } else {
-            // Show a generic welcome if not a tenant or no rent data
-            container.innerHTML = '<p>Welcome! Your community dashboard is being set up.</p>';
         }
+        
+        const contributionsCard = renderContributionsCard();
+        container.appendChild(contributionsCard);
 
     } catch (error) {
         console.error('Dashboard Error:', error);
-        container.classList.remove('loading'); // Also clear spinner on error
+        container.classList.remove('loading');
 
-        // Now we can show a user-friendly message for the specific auth error
         if (error.message === 'Authentication token not found.') {
             container.innerHTML = '<h2>Please Log In</h2><p>You need to be logged in to view your dashboard.</p>';
         } else {
-            // Generic error for other issues (like API being down)
             container.innerHTML = `<p style="color: red;">Could not load your dashboard at this time.</p>`;
         }
     }
