@@ -1,9 +1,16 @@
 // netlify/functions/log-contribution.js
 
 const Airtable = require('airtable');
-const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID);
 
-// Re-use the same token decoding logic
+// --- FIX: Use the correct PAT authentication method ---
+Airtable.configure({
+    endpointUrl: 'https://api.airtable.com',
+    apiKey: process.env.AIRTABLE_PAT
+});
+const base = Airtable.base(process.env.AIRTABLE_BASE_ID);
+// ----------------------------------------------------
+
+// This placeholder function uses the token directly as the User's Record ID
 const decodeToken = (token) => ({ userId: token });
 
 exports.handler = async function(event, context) {
@@ -12,9 +19,16 @@ exports.handler = async function(event, context) {
     }
 
     try {
+        if (!event.headers.authorization) {
+            return { statusCode: 401, body: 'Unauthorized: Missing authorization header.' };
+        }
+
         const token = event.headers.authorization.split(' ')[1];
+        if (!token) {
+            return { statusCode: 401, body: 'Unauthorized: Missing token.' };
+        }
+
         const { userId } = decodeToken(token);
-        
         const data = JSON.parse(event.body);
 
         // Basic validation
@@ -22,14 +36,13 @@ exports.handler = async function(event, context) {
             return { statusCode: 400, body: 'Missing hours or description.' };
         }
 
-        // Create the record in Airtable
+        // Create the record in the 'Contributions' table
         await base('Contributions').create([
             {
                 "fields": {
                     "Contributor": [userId], // Link to the user record
-                    // "Project": [data.projectId], // To be added in Phase 2
                     "Date": new Date().toISOString().slice(0, 10),
-                    "Hours Logged": parseInt(data.hours, 10),
+                    "Hours Logged": parseFloat(data.hours),
                     "Description": data.description,
                     "Status": "Pending Approval"
                 }
@@ -42,7 +55,7 @@ exports.handler = async function(event, context) {
         };
 
     } catch (error) {
-        console.error(error);
+        console.error("Function Error:", error);
         return {
             statusCode: 500,
             body: JSON.stringify({ error: 'Failed to log contribution.' }),
