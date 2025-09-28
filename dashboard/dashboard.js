@@ -23,7 +23,9 @@ async function initDashboard() {
     const container = document.getElementById('dashboard-container');
     try {
         const data = await fetchApi('get-dashboard-data');
-        
+
+        console.log("✅ Data from API:", data); // <-- ADD THIS LINE
+
         container.innerHTML = '';
         container.classList.remove('loading');
 
