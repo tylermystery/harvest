@@ -29,20 +29,14 @@ exports.handler = async function(event, context) {
         const { userId } = decodeToken(token);
         const userRecord = await base('Users').find(userId);
         const userData = userRecord.fields;
-        console.log("[DEBUG] Found user data. Role:", userData.Role);
 
         let rentData = null;
         
-        // --- NEW, SIMPLIFIED LOGIC ---
-        // If the user is a Tenant and has a linked RentLedger record...
+        // Use the direct link from the User record to find the rent ledger
         if (userData.Role === 'Tenant' && userData.RentLedger && userData.RentLedger.length > 0) {
             const rentLedgerId = userData.RentLedger[0];
-            console.log(`[DEBUG] User is a Tenant. Fetching linked RentLedger record: ${rentLedgerId}`);
-            
-            // Directly find the specific rent record using its ID
             const rentRecord = await base('RentLedger').find(rentLedgerId);
             const currentRentFields = rentRecord.fields;
-            console.log("[DEBUG] Found rent record fields:", currentRentFields);
 
             rentData = {
                 status: currentRentFields.Status, 
@@ -50,15 +44,18 @@ exports.handler = async function(event, context) {
                 month: currentRentFields.Month
             };
         }
+
+        // Calculate Net Contribution Score
+        const totalGgvi = userData['Total GGVI'] || 0;
+        const netContributionScore = totalGgvi; // Simplified for now
         
         const response = {
             userName: userData.Name,
             role: userData.Role,
-            totalGgvi: userData['Total GGVI'] || 0,
-            netContributionScore: 0, 
+            totalGgvi: totalGgvi,
+            netContributionScore: netContributionScore, 
             rent: rentData,
         };
-        console.log("[DEBUG] Final response:", response);
 
         return {
             statusCode: 200,
