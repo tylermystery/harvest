@@ -9,14 +9,9 @@ Airtable.configure({
 });
 const base = Airtable.base(process.env.AIRTABLE_BASE_ID);
 
-// This is a placeholder for your actual JWT decoding.
-// For now, it assumes the token is the user's Airtable Record ID.
 const decodeToken = (token) => ({ userId: token });
 
 exports.handler = async function(event, context) {
-    // --- We have removed the dummy data ---
-
-    // We now run the real logic
     if (event.httpMethod !== 'GET') {
         return { statusCode: 405, body: 'Method Not Allowed' };
     }
@@ -28,6 +23,9 @@ exports.handler = async function(event, context) {
         }
 
         const { userId } = decodeToken(token);
+        
+        // --- NEW DEBUG LOG ---
+        console.log(`[DEBUG] Attempting to find data for User ID: ${userId}`);
 
         // 1. Fetch user data
         const userRecord = await base('Users').find(userId);
@@ -36,14 +34,23 @@ exports.handler = async function(event, context) {
         // 2. Fetch rent data (if user is a tenant)
         let rentData = null;
         if (userData.Role === 'Tenant') {
+            
+            const filterFormula = `RECORD_ID({Tenant}) = '${userId}'`;
+            
+            // --- NEW DEBUG LOG ---
+            console.log(`[DEBUG] Using filter formula for RentLedger: ${filterFormula}`);
+            
             const rentRecords = await base('RentLedger').select({
-                // Use the robust formula to find the linked record
-                filterByFormula: `RECORD_ID({Tenant}) = '${userId}'`,
+                filterByFormula: filterFormula,
                 maxRecords: 1,
                 sort: [{field: "Month", direction: "desc"}]
             }).firstPage();
             
+            // --- NEW DEBUG LOG ---
+            console.log(`[DEBUG] Found ${rentRecords.length} rent records.`);
+            
             if (rentRecords.length > 0) {
+                // ... (rest of the logic is the same)
                 const currentRent = rentRecords[0].fields;
                 rentData = {
                     status: currentRent.Status,
@@ -53,14 +60,12 @@ exports.handler = async function(event, context) {
             }
         }
         
-        // 3. Assemble the response payload
         const response = {
             userName: userData.Name,
             role: userData.Role,
             totalGgvi: userData['Total GGVI'] || 0,
-            netContributionScore: 0, // Placeholder for Phase 2
+            netContributionScore: 0, 
             rent: rentData,
-            // We will add recentContributions in Phase 2
         };
 
         return {
@@ -76,3 +81,4 @@ exports.handler = async function(event, context) {
         };
     }
 };
+
