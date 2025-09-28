@@ -9,7 +9,8 @@ Airtable.configure({
 });
 const base = Airtable.base(process.env.AIRTABLE_BASE_ID);
 
-const decodeToken = (token) => ({ userId: token });
+// NOTE: We are temporarily ignoring the incoming token for this debug test.
+// const decodeToken = (token) => ({ userId: token });
 
 exports.handler = async function(event, context) {
     if (event.httpMethod !== 'GET') {
@@ -17,55 +18,36 @@ exports.handler = async function(event, context) {
     }
 
     try {
-        const token = event.headers.authorization.split(' ')[1];
-        if (!token) {
-            return { statusCode: 401, body: 'Unauthorized' };
-        }
+        // --- NEW DEBUG TEST ---
+        // We will try to fetch ANY single record from both tables to test connection.
 
-        const { userId } = decodeToken(token);
+        console.log("[DEBUG] --- Starting Connection Test ---");
+
+        // 1. Test connection to 'Users' table
+        console.log("[DEBUG] Attempting to fetch first record from 'Users' table...");
+        const userRecords = await base('Users').select({ maxRecords: 1 }).firstPage();
+        console.log(`[DEBUG] Found ${userRecords.length} records in 'Users' table.`);
+        const testUser = userRecords.length > 0 ? userRecords[0].fields.Name : "Not Found";
+        console.log(`[DEBUG] First user found: ${testUser}`);
+
+
+        // 2. Test connection to 'RentLedger' table
+        console.log("[DEBUG] Attempting to fetch first record from 'RentLedger' table...");
+        const rentRecords = await base('RentLedger').select({ maxRecords: 1 }).firstPage();
+        console.log(`[DEBUG] Found ${rentRecords.length} records in 'RentLedger' table.`);
+        const testRentStatus = rentRecords.length > 0 ? rentRecords[0].fields.Status : "Not Found";
+        console.log(`[DEBUG] First rent record status: ${testRentStatus}`);
         
-        // --- NEW DEBUG LOG ---
-        console.log(`[DEBUG] Attempting to find data for User ID: ${userId}`);
-
-        // 1. Fetch user data
-        const userRecord = await base('Users').find(userId);
-        const userData = userRecord.fields;
-
-        // 2. Fetch rent data (if user is a tenant)
-        let rentData = null;
-        if (userData.Role === 'Tenant') {
-            
-            const filterFormula = `RECORD_ID({Tenant}) = '${userId}'`;
-            
-            // --- NEW DEBUG LOG ---
-            console.log(`[DEBUG] Using filter formula for RentLedger: ${filterFormula}`);
-            
-            const rentRecords = await base('RentLedger').select({
-                filterByFormula: filterFormula,
-                maxRecords: 1,
-                sort: [{field: "Month", direction: "desc"}]
-            }).firstPage();
-            
-            // --- NEW DEBUG LOG ---
-            console.log(`[DEBUG] Found ${rentRecords.length} rent records.`);
-            
-            if (rentRecords.length > 0) {
-                // ... (rest of the logic is the same)
-                const currentRent = rentRecords[0].fields;
-                rentData = {
-                    status: currentRent.Status,
-                    amount: currentRent['Amount Due'],
-                    month: currentRent.Month
-                };
-            }
-        }
+        console.log("[DEBUG] --- Connection Test Finished ---");
         
+        // Return a simple success message for the frontend.
+        // The real data is in the Netlify logs.
         const response = {
-            userName: userData.Name,
-            role: userData.Role,
-            totalGgvi: userData['Total GGVI'] || 0,
+            userName: "Test Complete",
+            role: "Tester",
+            totalGgvi: 0, 
             netContributionScore: 0, 
-            rent: rentData,
+            rent: null,
         };
 
         return {
