@@ -2,7 +2,6 @@
 
 const Airtable = require('airtable');
 
-// Configure Airtable with the PAT
 Airtable.configure({
     endpointUrl: 'https://api.airtable.com',
     apiKey: process.env.AIRTABLE_PAT
@@ -20,7 +19,6 @@ exports.handler = async function(event, context) {
         if (!event.headers.authorization) {
             return { statusCode: 401, body: 'Unauthorized: Missing authorization header.' };
         }
-
         const token = event.headers.authorization.split(' ')[1];
         if (!token) {
             return { statusCode: 401, body: 'Unauthorized: Missing token.' };
@@ -31,13 +29,10 @@ exports.handler = async function(event, context) {
         const userData = userRecord.fields;
 
         let rentData = null;
-        
-        // Use the direct link from the User record to find the rent ledger
         if (userData.Role === 'Tenant' && userData.RentLedger && userData.RentLedger.length > 0) {
             const rentLedgerId = userData.RentLedger[0];
             const rentRecord = await base('RentLedger').find(rentLedgerId);
             const currentRentFields = rentRecord.fields;
-
             rentData = {
                 status: currentRentFields.Status, 
                 amount: currentRentFields['Amount Due'],
@@ -45,9 +40,16 @@ exports.handler = async function(event, context) {
             };
         }
 
-        // Calculate Net Contribution Score
+        // --- NEW: Calculate Net Contribution Score ---
         const totalGgvi = userData['Total GGVI'] || 0;
-        const netContributionScore = totalGgvi; // Simplified for now
+        let valueReceived = 0;
+        if (userData.Role === 'Tenant') {
+            valueReceived = 300; // Baseline value for a tenant
+        } else if (userData.Role === 'Employee') {
+            valueReceived = 500; // Baseline value for an employee
+        }
+        const netContributionScore = totalGgvi - valueReceived;
+        // ---------------------------------------------
         
         const response = {
             userName: userData.Name,
